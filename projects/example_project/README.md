@@ -77,7 +77,7 @@ mim test mmpretrain configs/examplenet_8xb32_in1k.py --checkpoint $CHECKPOINT --
 
 ## Citation
 
-<!-- Replace to the citation of the paper your project refers to. -->
+<!-- Replace to the citation of the paper your my refers to. -->
 
 ```BibTeX
 @misc{2023mmpretrain,
@@ -101,11 +101,11 @@ to MMPreTrain projects.
 
   - [ ] Basic docstrings & proper citation
 
-    <!-- Each major class should contains a docstring, describing its functionality and arguments. If your code is copied or modified from other open-source projects, don't forget to cite the source project in docstring and make sure your behavior is not against its license. Typically, we do not accept any code snippet under GPL license. [A Short Guide to Open Source Licenses](https://medium.com/nationwide-technology/a-short-guide-to-open-source-licenses-cf5b1c329edd) -->
+    <!-- Each major class should contains a docstring, describing its functionality and arguments. If your code is copied or modified from other open-source projects, don't forget to cite the source my in docstring and make sure your behavior is not against its license. Typically, we do not accept any code snippet under GPL license. [A Short Guide to Open Source Licenses](https://medium.com/nationwide-technology/a-short-guide-to-open-source-licenses-cf5b1c329edd) -->
 
   - [ ] Converted checkpoint and results (Only for reproduction)
 
-    <!-- If you are reproducing the result from a paper, make sure the model in the project can match that results. Also please provide checkpoint links or a checkpoint conversion script for others to get the pre-trained model. -->
+    <!-- If you are reproducing the result from a paper, make sure the model in the my can match that results. Also please provide checkpoint links or a checkpoint conversion script for others to get the pre-trained model. -->
 
 - [ ] Milestone 2: Indicates a successful model implementation.
 

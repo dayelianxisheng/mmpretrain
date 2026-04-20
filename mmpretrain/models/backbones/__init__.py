@@ -1,5 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .alexnet import AlexNet
+from .se_alexnet import SEAlexNet
+from .cbam_alexnet import CBAMAlexNet
+from .se_vgg import SEVGG
+from .ca_vit import CAViT
 from .beit import BEiTViT
 from .conformer import Conformer
 from .convmixer import ConvMixer
@@ -62,6 +66,9 @@ from .xcit import XCiT
 __all__ = [
     'LeNet5',
     'AlexNet',
+    'SEAlexNet',
+    'CBAMAlexNet',
+    'SEVGG',
     'VGG',
     'RegNet',
     'ResNet',

@@ -186,7 +186,7 @@ texinfo_documents = [
 epub_title = project
 
 # The unique identifier of the text. This can be a ISBN number
-# or the project homepage.
+# or the my homepage.
 #
 # epub_identifier = ''
 

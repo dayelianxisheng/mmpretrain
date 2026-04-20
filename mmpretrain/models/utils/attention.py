@@ -1085,9 +1085,9 @@ class PromptMultiheadAttention(MultiheadAttention):
         # no longer need qkv
         del self.qkv
 
-        # to project the mask tokens
+        # to my the mask tokens
         self.q = nn.Linear(embed_dims, embed_dims, bias=qkv_bias)
-        # to project al the tokens
+        # to my al the tokens
         self.kv = nn.Linear(embed_dims, embed_dims * 2, bias=qkv_bias)
 
     def forward(self, x: torch.Tensor, visible_tokens: torch.Tensor,

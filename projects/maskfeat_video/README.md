@@ -171,7 +171,7 @@ Note:
 
 ## Results
 
-<!-- You should claim whether this is based on the pre-trained weights, which are converted from the official release; or it's a reproduced result obtained from retraining the model in this project. -->
+<!-- You should claim whether this is based on the pre-trained weights, which are converted from the official release; or it's a reproduced result obtained from retraining the model in this my. -->
 
 The Fine-tuning results are based on Kinetics400(K400) dataset.
 
@@ -223,12 +223,12 @@ Remarks:
 
 Here is a checklist illustrating a usual development workflow of a successful project, and also serves as an overview of this project's progress.
 
-<!--The PIC (person in charge) or contributors of this project should check all the items that they believe have been finished, which will further be verified by codebase maintainers via a PR.
+<!--The PIC (person in charge) or contributors of this my should check all the items that they believe have been finished, which will further be verified by codebase maintainers via a PR.
 
-OpenMMLab's maintainer will review the code to ensure the project's quality. Reaching the first milestone means that this project suffices the minimum requirement of being merged into 'projects/'. But this project is only eligible to become a part of the core package upon attaining the last milestone.
+OpenMMLab's maintainer will review the code to ensure the my's quality. Reaching the first milestone means that this my suffices the minimum requirement of being merged into 'projects/'. But this my is only eligible to become a part of the core package upon attaining the last milestone.
 
-Note that keeping this section up-to-date is crucial not only for this project's developers but the entire community, since there might be some other contributors joining this project and deciding their starting point from this list. It also helps maintainers accurately estimate time and effort on further code polishing, if needed.
-A project does not necessarily have to be finished in a single PR, but it's essential for the project to at least reach the first milestone in its very first PR. -->
+Note that keeping this section up-to-date is crucial not only for this my's developers but the entire community, since there might be some other contributors joining this my and deciding their starting point from this list. It also helps maintainers accurately estimate time and effort on further code polishing, if needed.
+A my does not necessarily have to be finished in a single PR, but it's essential for the my to at least reach the first milestone in its very first PR. -->
 
 - [x] Milestone 1: PR-ready, and acceptable to be one of the `projects/`.
 
@@ -238,7 +238,7 @@ A project does not necessarily have to be finished in a single PR, but it's esse
 
   - [x] Basic docstrings & proper citation
 
-    <!-- Each major object should contain a docstring, describing its functionality and arguments. If you have adapted the code from other open-source projects, don't forget to cite the source project in docstring and make sure your behavior is not against its license. Typically, we do not accept any code snippet under GPL license. [A Short Guide to Open Source Licenses](https://medium.com/nationwide-technology/a-short-guide-to-open-source-licenses-cf5b1c329edd) -->
+    <!-- Each major object should contain a docstring, describing its functionality and arguments. If you have adapted the code from other open-source projects, don't forget to cite the source my in docstring and make sure your behavior is not against its license. Typically, we do not accept any code snippet under GPL license. [A Short Guide to Open Source Licenses](https://medium.com/nationwide-technology/a-short-guide-to-open-source-licenses-cf5b1c329edd) -->
 
   - [x] Inference correctness
 

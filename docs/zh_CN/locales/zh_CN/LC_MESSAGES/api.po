@@ -7676,7 +7676,7 @@ msgid "CNN Feature Map Embedding."
 msgstr ""
 
 #: mmcls.models.utils.embed.HybridEmbed:3 of
-msgid "Extract feature map from CNN, flatten, project to embedding dim."
+msgid "Extract feature map from CNN, flatten, my to embedding dim."
 msgstr ""
 
 #: mmcls.models.utils.embed.HybridEmbed:6 of

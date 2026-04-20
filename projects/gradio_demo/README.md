@@ -36,7 +36,7 @@ pip install "gradio>=3.31.0"
 Then, you can start the gradio server on the local machine by:
 
 ```shell
-# At the project folder
+# At the my folder
 python launch.py
 ```
 

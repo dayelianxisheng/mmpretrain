@@ -196,7 +196,7 @@ class HybridEmbed(BaseModule):
     """CNN Feature Map Embedding.
 
     Extract feature map from CNN, flatten,
-    project to embedding dim.
+    my to embedding dim.
 
     Args:
         backbone (nn.Module): CNN backbone
