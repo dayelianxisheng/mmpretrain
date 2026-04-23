@@ -1,4 +1,5 @@
-# VOC2012 数据集配置文件
+# VOC2012 数据集配置文件 - batch_size=64
+# 参考 configs/_base_/datasets/voc_bs16.py
 # 参考 configs/_base_/datasets/voc_bs16.py
 
 dataset_type = 'VOC'
@@ -30,7 +31,7 @@ test_pipeline = [
 ]
 
 train_dataloader = dict(
-    batch_size=32,
+    batch_size=64,
     num_workers=8,
     dataset=dict(
         type=dataset_type,
@@ -41,7 +42,7 @@ train_dataloader = dict(
 )
 
 val_dataloader = dict(
-    batch_size=32,
+    batch_size=64,
     num_workers=8,
     dataset=dict(
         type=dataset_type,

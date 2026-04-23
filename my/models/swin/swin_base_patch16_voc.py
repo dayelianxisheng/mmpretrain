@@ -2,20 +2,20 @@
 
 _base_ = [
     '../../../configs/_base_/models/swin_transformer/base_224.py',
-    '../../datasets/voc/voc_bs32.py',
+    '../../datasets/voc/voc_bs16.py',
     '../../../configs/_base_/default_runtime.py',
-    '../../schedules/adamw_bs64.py'
+    '../../schedules/adamw_bs16.py'
 ]
 
 # 多标签分类模型配置
 model = dict(
-    # backbone=dict(
-    #     init_cfg=dict(
-    #         type='Pretrained',
-    #         checkpoint='my/checkpoints/backbone/swin/swin_base_patch4_window7_224_3rdparty.pth',
-    #         prefix='backbone'
-    #     )
-    # ),
+    backbone=dict(
+        init_cfg=dict(
+            type='Pretrained',
+            checkpoint='my/checkpoints/backbone/swin/swin_base_patch4_window7_224-4670dd19.pth',
+            prefix='backbone'
+        )
+    ),
     head=dict(
         _delete_=True,
         type='MultiLabelLinearClsHead',

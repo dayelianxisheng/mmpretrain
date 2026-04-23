@@ -2,8 +2,7 @@
 
 _base_ = [
     '../../../configs/_base_/models/mobilenet_v2_1x.py',
-    '../../datasets/voc/voc_bs32.py',
-    '../../../configs/_base_/schedules/imagenet_bs256.py',
+    '../../datasets/voc/voc_bs64.py',
     '../../../configs/_base_/default_runtime.py',
     '../../schedules/adamw_bs64.py'
 ]
@@ -13,7 +12,7 @@ model = dict(
     backbone=dict(
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='my/checkpoints/backbone/mobilenet/mobilenet_v2_1x_3rdparty.pth',
+            checkpoint='my/checkpoints/backbone/mobilenet_v2/mobilenet_v2_batch256_imagenet_20200708-3b2dc3af.pth',
             prefix='backbone'
         )
     ),
