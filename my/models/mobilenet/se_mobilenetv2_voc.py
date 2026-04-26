@@ -1,21 +1,28 @@
-# MobileNetV2 VOC2012 训练配置
+# SE-MobileNetV2 VOC2012 训练配置
+# 改进：在 MobileNetV2 的每个 InvertedResidual 后添加 SE 注意力模块
 
 _base_ = [
     '../../../configs/_base_/models/mobilenet_v2_1x.py',
     '../../datasets/voc/voc_bs64.py',
     '../../../configs/_base_/default_runtime.py',
-    '../../schedules/adam_bs64.py',
+    '../../schedules/adam_bs64.py'
 ]
 
-# 多标签分类模型配置
+# SE-MobileNetV2 模型配置
 model = dict(
+    type='ImageClassifier',
     backbone=dict(
+        type='SEMobileNetV2',
+        widen_factor=1.0,
+        se_ratio=16,           # SE 模块的通道压缩比
+        out_indices=(7, ),    # 输出最后一层
         init_cfg=dict(
             type='Pretrained',
             checkpoint='my/checkpoints/backbone/mobilenet_v2/mobilenet_v2_batch256_imagenet_20200708-3b2dc3af.pth',
             prefix='backbone'
         )
     ),
+    neck=dict(type='GlobalAveragePooling'),
     data_preprocessor=dict(
         num_classes=20,
         mean=[123.675, 116.28, 103.53],

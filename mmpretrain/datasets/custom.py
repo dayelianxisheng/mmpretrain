@@ -176,7 +176,7 @@ class CustomDataset(BaseDataset):
             labels, or use sub-folders to specify categories.
             Defaults to True.
         extensions (Sequence[str]): A sequence of allowed extensions. Defaults
-            to ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif').
+            to ('.jpg', '.jpeg', 'sgd.png', '.ppm', '.bmp', '.pgm', '.tif').
         metainfo (dict, optional): Meta information for dataset, such as class
             information. Defaults to None.
         lazy_init (bool): Whether to load annotation during instantiation.
@@ -192,7 +192,7 @@ class CustomDataset(BaseDataset):
                  data_prefix: Union[str, dict] = '',
                  ann_file: str = '',
                  with_label=True,
-                 extensions: Sequence[str] = ('.jpg', '.jpeg', '.png', '.ppm',
+                 extensions: Sequence[str] = ('.jpg', '.jpeg', 'sgd.png', '.ppm',
                                               '.bmp', '.pgm', '.tif'),
                  metainfo: Optional[dict] = None,
                  lazy_init: bool = False,

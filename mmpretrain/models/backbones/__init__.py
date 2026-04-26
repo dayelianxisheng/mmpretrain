@@ -27,6 +27,7 @@ from .mixmim import MixMIMTransformer
 from .mlp_mixer import MlpMixer
 from .mobilenet_v2 import MobileNetV2
 from .mobilenet_v3 import MobileNetV3
+from .se_mobilenet_v2 import SEMobileNetV2
 from .mobileone import MobileOne
 from .mobilevit import MobileViT
 from .mvit import MViT
@@ -82,6 +83,7 @@ __all__ = [
     'ShuffleNetV2',
     'MobileNetV2',
     'MobileNetV3',
+    'SEMobileNetV2',
     'VisionTransformer',
     'SwinTransformer',
     'TNT',

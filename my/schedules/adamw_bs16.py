@@ -1,4 +1,3 @@
-# AdamW 优化器配置 - batch_size=64
 
 # 优化器配置
 optim_wrapper = dict(

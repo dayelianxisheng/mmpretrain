@@ -48,4 +48,4 @@ load_from = None
 resume = False
 
 # Defaults to use random seed and disable `deterministic`
-randomness = dict(seed=None, deterministic=False)
+randomness = dict(seed=42, deterministic=True)

@@ -268,7 +268,7 @@ class ShapeBias:
 
         # remove unnecessary words
         a = imagename.split('_')[-1]
-        # remove .png etc.
+        # remove sgd.png etc.
         b = a.split('.')[0]
         # get texture category (last word)
         c = b.split('-')[-1]

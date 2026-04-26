@@ -8,11 +8,23 @@ data_preprocessor = dict(
     to_onehot=True,
 )
 
+
 train_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='RandomResizedCrop', scale=224, crop_ratio_range=(0.8, 1.0)),
+    # Albumentations 库增强
+    dict(type='Albu',
+         transforms=[
+             dict(type='ShiftScaleRotate', shift_limit=0.1, scale_limit=0.2,
+                  rotate_limit=15, p=0.5),
+             dict(type='RandomBrightnessContrast', brightness_limit=0.3,
+                  contrast_limit=0.3, p=0.5),
+             dict(type='CoarseDropout', max_holes=6, max_height=40,
+                  max_width=40, p=0.3),
+         ],
+         ),
+    # 基础几何变换
+    dict(type='RandomResizedCrop', scale=224, crop_ratio_range=(0.7, 1.0)),
     dict(type='RandomFlip', prob=0.5, direction='horizontal'),
-    dict(type='ColorJitter', brightness=0.2, contrast=0.2, saturation=0.2),
     dict(type='PackInputs'),
 ]
 

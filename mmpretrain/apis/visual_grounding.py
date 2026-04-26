@@ -137,7 +137,7 @@ class VisualGroundingInferencer(BaseInferencer):
             if show_dir is not None:
                 show_dir = Path(show_dir)
                 show_dir.mkdir(exist_ok=True)
-                out_file = str((show_dir / name).with_suffix('.png'))
+                out_file = str((show_dir / name).with_suffix('sgd.png'))
             else:
                 out_file = None
 

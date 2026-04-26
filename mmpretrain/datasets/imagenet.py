@@ -88,7 +88,7 @@ class ImageNet(CustomDataset):
             Root of dataset:    data/imagenet
     """  # noqa: E501
 
-    IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif')
+    IMG_EXTENSIONS = ('.jpg', '.jpeg', 'sgd.png', '.ppm', '.bmp', '.pgm', '.tif')
     METAINFO = {'classes': IMAGENET_CATEGORIES}
 
     def __init__(self,
@@ -182,7 +182,7 @@ class ImageNet21k(CustomDataset):
             Prefix of images:   data/imagenet21k/train
     """  # noqa: E501
 
-    IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif')
+    IMG_EXTENSIONS = ('.jpg', '.jpeg', 'sgd.png', '.ppm', '.bmp', '.pgm', '.tif')
 
     def __init__(self,
                  data_root: str = '',

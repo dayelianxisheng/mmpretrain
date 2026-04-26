@@ -829,7 +829,7 @@ msgstr ""
 
 #: mmcls.datasets.custom.CustomDataset:58 of
 msgid ""
-"A sequence of allowed extensions. Defaults to ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif')."
+"A sequence of allowed extensions. Defaults to ('.jpg', '.jpeg', 'sgd.png', '.ppm', '.bmp', '.pgm', '.tif')."
 msgstr ""
 
 #: mmcls.datasets.base_dataset.BaseDataset:37 mmcls.datasets.custom.CustomDataset:61

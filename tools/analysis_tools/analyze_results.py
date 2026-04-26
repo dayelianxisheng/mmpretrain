@@ -66,7 +66,7 @@ def save_imgs(result_dir, folder_name, results, dataset, rescale_factor=None):
         if rescale_factor is not None:
             img = mmcv.imrescale(img, rescale_factor)
         vis.visualize_cls(
-            img, data_sample, out_file=osp.join(full_dir, name + '.png'))
+            img, data_sample, out_file=osp.join(full_dir, name + 'sgd.png'))
 
         dump = dict()
         for k, v in data_sample.items():

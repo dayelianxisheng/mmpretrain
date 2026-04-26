@@ -6,12 +6,13 @@ from mmengine.model import BaseModule
 from torch.nn.modules.batchnorm import _BatchNorm
 
 from mmpretrain.models.utils import make_divisible
+from mmpretrain.models.utils.se_layer import SELayer
 from mmpretrain.registry import MODELS
 from .base_backbone import BaseBackbone
 
 
-class InvertedResidual(BaseModule):
-    """InvertedResidual block for MobileNetV2.
+class SEInvertedResidual(BaseModule):
+    """InvertedResidual block with SE attention for MobileNetV2.
 
     Args:
         in_channels (int): The input channels of the InvertedResidual block.
@@ -19,6 +20,7 @@ class InvertedResidual(BaseModule):
         stride (int): Stride of the middle (first) 3x3 convolution.
         expand_ratio (int): adjusts number of channels of the hidden layer
             in InvertedResidual by this amount.
+        se_ratio (int): Channel reduction ratio for SE block. Default: 16.
         conv_cfg (dict, optional): Config dict for convolution layer.
             Default: None, which means using conv2d.
         norm_cfg (dict): Config dict for normalization layer.
@@ -37,12 +39,13 @@ class InvertedResidual(BaseModule):
                  out_channels,
                  stride,
                  expand_ratio,
+                 se_ratio=16,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
                  act_cfg=dict(type='ReLU6'),
                  with_cp=False,
                  init_cfg=None):
-        super(InvertedResidual, self).__init__(init_cfg)
+        super(SEInvertedResidual, self).__init__(init_cfg)
         self.stride = stride
         assert stride in [1, 2], f'stride must in [1, 2]. ' \
             f'But received {stride}.'
@@ -81,13 +84,18 @@ class InvertedResidual(BaseModule):
         ])
         self.conv = nn.Sequential(*layers)
 
+        # Add SE block after the depthwise convolution output
+        self.se = SELayer(out_channels, ratio=se_ratio)
+
     def forward(self, x):
 
         def _inner_forward(x):
+            out = self.conv(x)
+            out = self.se(out)
             if self.use_res_connect:
-                return x + self.conv(x)
+                return x + out
             else:
-                return self.conv(x)
+                return out
 
         if self.with_cp and x.requires_grad:
             out = cp.checkpoint(_inner_forward, x)
@@ -98,8 +106,8 @@ class InvertedResidual(BaseModule):
 
 
 @MODELS.register_module()
-class MobileNetV2(BaseBackbone):
-    """MobileNetV2 backbone.
+class SEMobileNetV2(BaseBackbone):
+    """MobileNetV2 backbone with Squeeze-and-Excitation attention.
 
     Args:
         widen_factor (float): Width multiplier, multiply number of
@@ -108,6 +116,7 @@ class MobileNetV2(BaseBackbone):
             Default: (7, ).
         frozen_stages (int): Stages to be frozen (all param fixed).
             Default: -1, which means not freezing any parameters.
+        se_ratio (int): Channel reduction ratio for SE block. Default: 16.
         conv_cfg (dict, optional): Config dict for convolution layer.
             Default: None, which means using conv2d.
         norm_cfg (dict): Config dict for normalization layer.
@@ -119,6 +128,9 @@ class MobileNetV2(BaseBackbone):
             and its variants only. Default: False.
         with_cp (bool): Use checkpoint or not. Using checkpoint will save some
             memory while slowing down the training speed. Default: False.
+
+    Returns:
+        tuple: Output of a specific encoder stage.
     """
 
     # Parameters to build layers. 4 parameters are needed to construct a
@@ -131,6 +143,7 @@ class MobileNetV2(BaseBackbone):
                  widen_factor=1.,
                  out_indices=(7, ),
                  frozen_stages=-1,
+                 se_ratio=16,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
                  act_cfg=dict(type='ReLU6'),
@@ -143,9 +156,11 @@ class MobileNetV2(BaseBackbone):
                          val=1,
                          layer=['_BatchNorm', 'GroupNorm'])
                  ]):
-        super(MobileNetV2, self).__init__(init_cfg)
+        super(SEMobileNetV2, self).__init__(init_cfg)
         self.widen_factor = widen_factor
         self.out_indices = out_indices
+        self.se_ratio = se_ratio
+
         for index in out_indices:
             if index not in range(0, 8):
                 raise ValueError('the item in out_indices must in '
@@ -172,7 +187,6 @@ class MobileNetV2(BaseBackbone):
             padding=1,
             conv_cfg=self.conv_cfg,
             norm_cfg=self.norm_cfg,
-
             act_cfg=self.act_cfg)
 
         self.layers = []
@@ -180,13 +194,13 @@ class MobileNetV2(BaseBackbone):
         for i, layer_cfg in enumerate(self.arch_settings):
             expand_ratio, channel, num_blocks, stride = layer_cfg
             out_channels = make_divisible(channel * widen_factor, 8)
-            inverted_res_layer = self.make_layer(
+            se_inverted_res_layer = self.make_layer(
                 out_channels=out_channels,
                 num_blocks=num_blocks,
                 stride=stride,
                 expand_ratio=expand_ratio)
             layer_name = f'layer{i + 1}'
-            self.add_module(layer_name, inverted_res_layer)
+            self.add_module(layer_name, se_inverted_res_layer)
             self.layers.append(layer_name)
 
         if widen_factor > 1.0:
@@ -207,25 +221,26 @@ class MobileNetV2(BaseBackbone):
         self.layers.append('conv2')
 
     def make_layer(self, out_channels, num_blocks, stride, expand_ratio):
-        """Stack InvertedResidual blocks to build a layer for MobileNetV2.
+        """Stack SE-InvertedResidual blocks to build a layer.
 
         Args:
             out_channels (int): out_channels of block.
             num_blocks (int): number of blocks.
             stride (int): stride of the first block. Default: 1
             expand_ratio (int): Expand the number of channels of the
-                hidden layer in InvertedResidual by this ratio. Default: 6.
+                hidden layer in InvertedResidual by this amount. Default: 6.
         """
         layers = []
         for i in range(num_blocks):
             if i >= 1:
                 stride = 1
             layers.append(
-                InvertedResidual(
+                SEInvertedResidual(
                     self.in_channels,
                     out_channels,
                     stride,
                     expand_ratio=expand_ratio,
+                    se_ratio=self.se_ratio,
                     conv_cfg=self.conv_cfg,
                     norm_cfg=self.norm_cfg,
                     act_cfg=self.act_cfg,
@@ -257,9 +272,10 @@ class MobileNetV2(BaseBackbone):
                 param.requires_grad = False
 
     def train(self, mode=True):
-        super(MobileNetV2, self).train(mode)
+        super(SEMobileNetV2, self).train(mode)
         self._freeze_stages()
         if mode and self.norm_eval:
             for m in self.modules():
                 if isinstance(m, _BatchNorm):
                     m.eval()
+

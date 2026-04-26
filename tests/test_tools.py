@@ -403,7 +403,7 @@ class TestVisTsne(TestCase):
             '2',
         ]
         Popen(command, cwd=MMPRE_ROOT, stdout=PIPE).wait()
-        self.assertTrue(len(list(self.dir.glob('tsne_*/feat_*.png'))) > 0)
+        self.assertTrue(len(list(self.dir.glob('tsne_*/feat_*sgd.png'))) > 0)
 
 
 class TestGetFlops(TestCase):

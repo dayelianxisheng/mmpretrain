@@ -70,7 +70,7 @@ class OCRVQA(BaseDataset):
                 continue
 
             extension = osp.splitext(ann['imageURL'])[1]
-            if extension not in ['.jpg', '.png']:
+            if extension not in ['.jpg', 'sgd.png']:
                 continue
             img_path = mmengine.join_path(self.data_prefix['img_path'],
                                           key + extension)

@@ -22,7 +22,7 @@ class Places205(CustomDataset):
             :class:`BaseDataset`.
     """
 
-    IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif')
+    IMG_EXTENSIONS = ('.jpg', '.jpeg', 'sgd.png', '.ppm', '.bmp', '.pgm', '.tif')
     METAINFO = {'classes': PLACES205_CATEGORIES}
 
     def __init__(self,

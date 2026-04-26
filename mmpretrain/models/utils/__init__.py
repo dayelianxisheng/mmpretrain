@@ -25,6 +25,8 @@ from .position_encoding import (ConditionalPositionEncoding,
                                 build_2d_sincos_position_embedding)
 from .res_layer_extra_norm import ResLayerExtraNorm
 from .se_layer import SELayer
+from .eca_layer import ECALayer
+from .simam_layer import SimAModule
 from .sparse_modules import (SparseAvgPooling, SparseBatchNorm2d, SparseConv2d,
                              SparseHelper, SparseLayerNorm2D, SparseMaxPooling,
                              SparseSyncBatchNorm2d)
@@ -88,7 +90,9 @@ __all__ = [
     'SparseBatchNorm2d',
     'SparseLayerNorm2D',
     'SparseSyncBatchNorm2d',
-    'CoordAtt'
+    'CoordAtt',
+    'ECALayer',
+    'SimAModule'
 ]
 
 if WITH_MULTIMODAL:
