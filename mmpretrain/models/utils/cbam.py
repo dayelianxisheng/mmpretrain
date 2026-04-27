@@ -45,29 +45,3 @@ class cbam(nn.Module):
         x = self.ca(x)*x
         x = self.sa(x)*x
         return x
-#
-# class DoubleConv(nn.Module):
-#     def __init__(self, in_channels, out_channels):
-#         super(DoubleConv, self).__init__()
-#         self.double_conv = nn.Sequential(
-#             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
-#             nn.BatchNorm2d(out_channels),
-#             nn.ReLU(inplace=True),
-#             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
-#             nn.BatchNorm2d(out_channels),
-#             nn.ReLU(inplace=True)
-#         )
-#
-#     def forward(self, x):
-#         return self.double_conv(x)
-#
-# # CBAM放在中间层
-# class CBAMConv(nn.Module):
-#     def __init__(self, in_channel, out_channel):
-#         super().__init__()
-#         self.conv = DoubleConv(in_channel, out_channel)
-#         self.cbam = cbam(out_channel)
-#
-#     def forward(self, x):
-#         x = self.conv(x)
-#         return self.cbam(x)

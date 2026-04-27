@@ -28,6 +28,10 @@ from .mlp_mixer import MlpMixer
 from .mobilenet_v2 import MobileNetV2
 from .mobilenet_v3 import MobileNetV3
 from .se_mobilenet_v2 import SEMobileNetV2
+from .cbam_mobilenet_v2 import CBAMMobileNetV2
+from .cbam_mobilenet_v2_dw import CBAMMobileNetV2DWConv
+from .ca_mobilenet_v2 import CAMobileNetV2
+from .combo_mobilenet_v2 import ComboMobileNetV2
 from .mobileone import MobileOne
 from .mobilevit import MobileViT
 from .mvit import MViT
@@ -84,6 +88,10 @@ __all__ = [
     'MobileNetV2',
     'MobileNetV3',
     'SEMobileNetV2',
+    'CBAMMobileNetV2',
+    'CBAMMobileNetV2DWConv',
+    'CAMobileNetV2',
+    'ComboMobileNetV2',
     'VisionTransformer',
     'SwinTransformer',
     'TNT',

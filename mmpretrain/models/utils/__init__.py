@@ -33,6 +33,7 @@ from .sparse_modules import (SparseAvgPooling, SparseBatchNorm2d, SparseConv2d,
 from .swiglu_ffn import SwiGLUFFN, SwiGLUFFNFused
 from .vector_quantizer import NormEMAVectorQuantizer
 from .ca import CoordAtt
+from .cbam import cbam
 __all__ = [
     'channel_shuffle',
     'make_divisible',
@@ -92,7 +93,8 @@ __all__ = [
     'SparseSyncBatchNorm2d',
     'CoordAtt',
     'ECALayer',
-    'SimAModule'
+    'SimAModule',
+    'cbam'
 ]
 
 if WITH_MULTIMODAL:

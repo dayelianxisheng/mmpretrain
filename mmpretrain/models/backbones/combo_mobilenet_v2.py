@@ -5,15 +5,17 @@ from mmcv.cnn import ConvModule
 from mmengine.model import BaseModule
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from mmpretrain.models.utils import make_divisible, SELayer
+from mmpretrain.models.utils import (make_divisible, SELayer, cbam,
+                                     CoordAtt)
 from mmpretrain.registry import MODELS
 from .mobilenet_v2 import MobileNetV2, InvertedResidual
 
 
-class SEInvertedResidual(InvertedResidual):
-    """InvertedResidual block with SE attention for MobileNetV2.
+class ComboInvertedResidual(InvertedResidual):
+    """InvertedResidual block with SE + CBAM + CA attention for MobileNetV2.
 
-    Inherits from the original InvertedResidual and adds SE module.
+    Inherits from the original InvertedResidual and adds triple attention:
+    SE -> CBAM -> CA
     """
 
     def __init__(self,
@@ -22,12 +24,15 @@ class SEInvertedResidual(InvertedResidual):
                  stride,
                  expand_ratio,
                  se_ratio=16,
+                 cbam_ratio=16,
+                 cbam_kernel=3,
+                 ca_reduction=32,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
                  act_cfg=dict(type='ReLU6'),
                  with_cp=False,
                  init_cfg=None):
-        # Initialize the parent InvertedResidual (don't pass se params to parent)
+        # Initialize the parent InvertedResidual
         super().__init__(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -40,27 +45,39 @@ class SEInvertedResidual(InvertedResidual):
             init_cfg=init_cfg
         )
 
-        # Add SE module after the convolution
+        # Add triple attention modules after the convolution
         self.se = SELayer(
             channels=out_channels,
             ratio=se_ratio
         )
+        self.cbam = cbam(
+            in_planes=out_channels,
+            ratio=cbam_ratio,
+            kernel_size=cbam_kernel
+        )
+        self.ca = CoordAtt(
+            inp=out_channels,
+            oup=out_channels,
+            reduction=ca_reduction
+        )
 
     def forward(self, x):
-        """Forward function with SE.
+        """Forward function with triple attention.
 
         Args:
             x (Tensor): Input feature map.
 
         Returns:
-            Tensor: Output feature map with SE attention.
+            Tensor: Output feature map with SE -> CBAM -> CA attention.
         """
         def _inner_forward(x):
             # Get the output from convolution (inherited from parent)
             out = self.conv(x)
 
-            # Apply SE
+            # Apply triple attention: SE -> CBAM -> CA
             out = self.se(out)
+            out = self.cbam(out)
+            out = self.ca(out)
 
             # Residual connection
             if self.use_res_connect:
@@ -77,11 +94,11 @@ class SEInvertedResidual(InvertedResidual):
 
 
 @MODELS.register_module()
-class SEMobileNetV2(MobileNetV2):
-    """MobileNetV2 backbone with Squeeze-and-Excitation attention.
+class ComboMobileNetV2(MobileNetV2):
+    """MobileNetV2 backbone with SE + CBAM + CA triple attention.
 
     This backbone inherits from MobileNetV2 and replaces all InvertedResidual
-    blocks with SEInvertedResidual blocks.
+    blocks with ComboInvertedResidual blocks (with SE, CBAM, and CA).
 
     Args:
         widen_factor (float): Width multiplier, multiply number of
@@ -90,7 +107,12 @@ class SEMobileNetV2(MobileNetV2):
             Default: (7, ).
         frozen_stages (int): Stages to be frozen (all param fixed).
             Default: -1, which means not freezing any parameters.
-        se_ratio (int): Channel reduction ratio for SE block. Default: 16.
+        se_ratio (int): Reduction ratio for SE module. Default: 16.
+        cbam_ratio (int): Reduction ratio for CBAM channel attention.
+            Default: 16.
+        cbam_kernel (int): Kernel size for CBAM spatial attention.
+            Default: 3.
+        ca_reduction (int): Reduction ratio for CoordAttention. Default: 32.
         conv_cfg (dict, optional): Config dict for convolution layer.
             Default: None, which means using conv2d.
         norm_cfg (dict): Config dict for normalization layer.
@@ -109,17 +131,23 @@ class SEMobileNetV2(MobileNetV2):
                  out_indices=(7, ),
                  frozen_stages=-1,
                  se_ratio=16,
+                 cbam_ratio=16,
+                 cbam_kernel=3,
+                 ca_reduction=32,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
                  act_cfg=dict(type='ReLU6'),
                  norm_eval=False,
                  with_cp=False,
                  init_cfg=None):
-        # Store SE parameter BEFORE calling parent __init__
+        # Store triple attention parameters BEFORE calling parent __init__
         # because parent __init__ will call self.make_layer()
         self.se_ratio = se_ratio
+        self.cbam_ratio = cbam_ratio
+        self.cbam_kernel = cbam_kernel
+        self.ca_reduction = ca_reduction
 
-        # Initialize parent MobileNetV2 (don't pass se params)
+        # Initialize parent MobileNetV2
         super().__init__(
             widen_factor=widen_factor,
             out_indices=out_indices,
@@ -133,9 +161,9 @@ class SEMobileNetV2(MobileNetV2):
         )
 
     def make_layer(self, out_channels, num_blocks, stride, expand_ratio):
-        """Stack SEInvertedResidual blocks to build a layer for SE-MobileNetV2.
+        """Stack ComboInvertedResidual blocks to build a layer.
 
-        This overrides the parent's make_layer to use SEInvertedResidual
+        This overrides the parent's make_layer to use ComboInvertedResidual
         instead of InvertedResidual.
 
         Args:
@@ -146,19 +174,22 @@ class SEMobileNetV2(MobileNetV2):
                 hidden layer in InvertedResidual by this ratio.
 
         Returns:
-            nn.Sequential: A layer composed of multiple SEInvertedResidual blocks.
+            nn.Sequential: A layer composed of multiple ComboInvertedResidual blocks.
         """
         layers = []
         for i in range(num_blocks):
             if i >= 1:
                 stride = 1
             layers.append(
-                SEInvertedResidual(
+                ComboInvertedResidual(
                     self.in_channels,
                     out_channels,
                     stride,
                     expand_ratio=expand_ratio,
                     se_ratio=self.se_ratio,
+                    cbam_ratio=self.cbam_ratio,
+                    cbam_kernel=self.cbam_kernel,
+                    ca_reduction=self.ca_reduction,
                     conv_cfg=self.conv_cfg,
                     norm_cfg=self.norm_cfg,
                     act_cfg=self.act_cfg,

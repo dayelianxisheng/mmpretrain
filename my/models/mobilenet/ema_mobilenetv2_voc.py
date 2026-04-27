@@ -1,23 +1,22 @@
-# SE-MobileNetV2 VOC2012 训练配置
-# 改进：在 MobileNetV2 的每个 InvertedResidual 后添加 SE 注意力模块
+# EMA-MobileNetV2 VOC2012 训练配置
+# 轻量化改进：仅添加 EMA 权重平均，零参数增量
 # 训练策略：冻结解冻 + EMA
 
 _base_ = [
     '../../../configs/_base_/models/mobilenet_v2_1x.py',
     '../../datasets/voc/voc_bs64.py',
     '../../../configs/_base_/default_runtime.py',
-    '../../schedules/adam_bs64.py'
+    '../../schedules/adam_bs64.py',
 ]
 
-# SE-MobileNetV2 模型配置
+# MobileNetV2 模型配置
 model = dict(
     type='ImageClassifier',
     backbone=dict(
-        type='SEMobileNetV2',
+        type='MobileNetV2',
         widen_factor=1.0,
-        se_ratio=16,           # SE 模块的通道压缩比
-        out_indices=(7, ),    # 输出最后一层
-        frozen_stages=-1,     # 不在 backbone 内部冻结，由 FreezeLayersHook 控制
+        out_indices=(7, ),
+        frozen_stages=-1,
         init_cfg=dict(
             type='Pretrained',
             checkpoint='my/checkpoints/backbone/mobilenet_v2/mobilenet_v2_batch256_imagenet_20200708-3b2dc3af.pth',
@@ -41,21 +40,14 @@ model = dict(
     head=dict(
         type='MultiLabelLinearClsHead',
         num_classes=20,
-        in_channels=1280,  # MobileNetV2 输出通道
+        in_channels=1280,
         topk=1,
         loss=dict(type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0)
     )
 )
 
-# 冻结解冻策略：前5个epoch冻结backbone只训练head和SE，解冻后用不同学习率
+# 仅添加 EMA，零参数增量
 custom_hooks = [
-    dict(
-        type='FreezeLayersHook',
-        freeze_layers=['backbone'],     # 冻结整个 backbone
-        freeze_epochs=5,               # 5个epoch后解冻
-        unfreeze_backbone=True,
-        priority='ABOVE_NORMAL'
-    ),
     dict(
         type='EMAHook',
         momentum=0.0002,
@@ -63,15 +55,13 @@ custom_hooks = [
     ),
 ]
 
-# 学习率调度：冻结期小lr，解冻后cosine恢复
+# 学习率调度
 param_scheduler = [
-    # 前5个epoch冻结期用小学习率
     dict(type='LinearLR', start_factor=0.01, by_epoch=True, begin=0, end=5),
-    # 解冻后用常规学习率+余弦退火
     dict(type='CosineAnnealingLR', T_max=95, eta_min=5e-6, by_epoch=True, begin=5, end=100),
 ]
 
-# 优化器配置：参数分组，backbone用低学习率，head和SE用正常学习率
+# 优化器配置
 optim_wrapper = dict(
     optimizer=dict(
         type='Adam',
@@ -80,14 +70,6 @@ optim_wrapper = dict(
         weight_decay=0.0001,
     ),
     clip_grad=dict(max_norm=1.0),
-    paramwise_cfg=dict(
-        custom_keys={
-            # backbone 用 0.1x 学习率
-            'backbone': dict(lr_mult=0.1),
-            # SE 模块和 head 用正常学习率
-            'head': dict(lr_mult=1.0),
-        }
-    )
 )
 
 # 每10个epoch保存一次权重
@@ -100,5 +82,5 @@ default_hooks = dict(
     )
 )
 
-# 关闭确定性算法，避免 CuBLAS 非确定性警告
+# 关闭确定性算法
 randomness = dict(seed=42, deterministic=False)

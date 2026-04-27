@@ -1,5 +1,5 @@
-# SE-MobileNetV2 VOC2012 训练配置
-# 改进：在 MobileNetV2 的每个 InvertedResidual 后添加 SE 注意力模块
+# CBAM-MobileNetV2 VOC2012 训练配置
+# 改进：在 MobileNetV2 的每个 InvertedResidual 后添加 CBAM 注意力模块（通道 + 空间注意力）
 # 训练策略：冻结解冻 + EMA
 
 _base_ = [
@@ -9,15 +9,16 @@ _base_ = [
     '../../schedules/adam_bs64.py'
 ]
 
-# SE-MobileNetV2 模型配置
+# CBAM-MobileNetV2 模型配置
 model = dict(
     type='ImageClassifier',
     backbone=dict(
-        type='SEMobileNetV2',
+        type='CBAMMobileNetV2',
         widen_factor=1.0,
-        se_ratio=16,           # SE 模块的通道压缩比
-        out_indices=(7, ),    # 输出最后一层
-        frozen_stages=-1,     # 不在 backbone 内部冻结，由 FreezeLayersHook 控制
+        cbam_ratio=16,          # CBAM 通道注意力的压缩比
+        kernel_size=3,           # CBAM 空间注意力的卷积核大小
+        out_indices=(7, ),       # 输出最后一层
+        frozen_stages=-1,       # 不在 backbone 内部冻结，由 FreezeLayersHook 控制
         init_cfg=dict(
             type='Pretrained',
             checkpoint='my/checkpoints/backbone/mobilenet_v2/mobilenet_v2_batch256_imagenet_20200708-3b2dc3af.pth',
@@ -47,7 +48,7 @@ model = dict(
     )
 )
 
-# 冻结解冻策略：前5个epoch冻结backbone只训练head和SE，解冻后用不同学习率
+# 冻结解冻策略：前5个epoch冻结backbone只训练head和CBAM，解冻后用不同学习率
 custom_hooks = [
     dict(
         type='FreezeLayersHook',
@@ -71,7 +72,7 @@ param_scheduler = [
     dict(type='CosineAnnealingLR', T_max=95, eta_min=5e-6, by_epoch=True, begin=5, end=100),
 ]
 
-# 优化器配置：参数分组，backbone用低学习率，head和SE用正常学习率
+# 优化器配置：参数分组，backbone用低学习率，head和CBAM用正常学习率
 optim_wrapper = dict(
     optimizer=dict(
         type='Adam',
@@ -84,7 +85,7 @@ optim_wrapper = dict(
         custom_keys={
             # backbone 用 0.1x 学习率
             'backbone': dict(lr_mult=0.1),
-            # SE 模块和 head 用正常学习率
+            # head 用正常学习率
             'head': dict(lr_mult=1.0),
         }
     )
@@ -99,6 +100,3 @@ default_hooks = dict(
         monitor='multi-label/mAP'
     )
 )
-
-# 关闭确定性算法，避免 CuBLAS 非确定性警告
-randomness = dict(seed=42, deterministic=False)

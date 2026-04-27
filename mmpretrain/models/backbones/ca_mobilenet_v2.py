@@ -5,15 +5,15 @@ from mmcv.cnn import ConvModule
 from mmengine.model import BaseModule
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from mmpretrain.models.utils import make_divisible, SELayer
+from mmpretrain.models.utils import make_divisible, CoordAtt
 from mmpretrain.registry import MODELS
 from .mobilenet_v2 import MobileNetV2, InvertedResidual
 
 
-class SEInvertedResidual(InvertedResidual):
-    """InvertedResidual block with SE attention for MobileNetV2.
+class CAInvertedResidual(InvertedResidual):
+    """InvertedResidual block with CoordAttention for MobileNetV2.
 
-    Inherits from the original InvertedResidual and adds SE module.
+    Inherits from the original InvertedResidual and adds CoordAttention module.
     """
 
     def __init__(self,
@@ -21,13 +21,13 @@ class SEInvertedResidual(InvertedResidual):
                  out_channels,
                  stride,
                  expand_ratio,
-                 se_ratio=16,
+                 reduction=32,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
                  act_cfg=dict(type='ReLU6'),
                  with_cp=False,
                  init_cfg=None):
-        # Initialize the parent InvertedResidual (don't pass se params to parent)
+        # Initialize the parent InvertedResidual (don't pass ca params to parent)
         super().__init__(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -40,27 +40,28 @@ class SEInvertedResidual(InvertedResidual):
             init_cfg=init_cfg
         )
 
-        # Add SE module after the convolution
-        self.se = SELayer(
-            channels=out_channels,
-            ratio=se_ratio
+        # Add CoordAttention module after the convolution
+        self.ca = CoordAtt(
+            inp=out_channels,
+            oup=out_channels,
+            reduction=reduction
         )
 
     def forward(self, x):
-        """Forward function with SE.
+        """Forward function with CoordAttention.
 
         Args:
             x (Tensor): Input feature map.
 
         Returns:
-            Tensor: Output feature map with SE attention.
+            Tensor: Output feature map with CoordAttention.
         """
         def _inner_forward(x):
             # Get the output from convolution (inherited from parent)
             out = self.conv(x)
 
-            # Apply SE
-            out = self.se(out)
+            # Apply CoordAttention
+            out = self.ca(out)
 
             # Residual connection
             if self.use_res_connect:
@@ -77,11 +78,11 @@ class SEInvertedResidual(InvertedResidual):
 
 
 @MODELS.register_module()
-class SEMobileNetV2(MobileNetV2):
-    """MobileNetV2 backbone with Squeeze-and-Excitation attention.
+class CAMobileNetV2(MobileNetV2):
+    """MobileNetV2 backbone with CoordAttention.
 
     This backbone inherits from MobileNetV2 and replaces all InvertedResidual
-    blocks with SEInvertedResidual blocks.
+    blocks with CAInvertedResidual blocks.
 
     Args:
         widen_factor (float): Width multiplier, multiply number of
@@ -90,7 +91,7 @@ class SEMobileNetV2(MobileNetV2):
             Default: (7, ).
         frozen_stages (int): Stages to be frozen (all param fixed).
             Default: -1, which means not freezing any parameters.
-        se_ratio (int): Channel reduction ratio for SE block. Default: 16.
+        reduction (int): Reduction ratio for CoordAttention. Default: 32.
         conv_cfg (dict, optional): Config dict for convolution layer.
             Default: None, which means using conv2d.
         norm_cfg (dict): Config dict for normalization layer.
@@ -108,18 +109,18 @@ class SEMobileNetV2(MobileNetV2):
                  widen_factor=1.,
                  out_indices=(7, ),
                  frozen_stages=-1,
-                 se_ratio=16,
+                 reduction=32,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
                  act_cfg=dict(type='ReLU6'),
                  norm_eval=False,
                  with_cp=False,
                  init_cfg=None):
-        # Store SE parameter BEFORE calling parent __init__
+        # Store CA parameter BEFORE calling parent __init__
         # because parent __init__ will call self.make_layer()
-        self.se_ratio = se_ratio
+        self.reduction = reduction
 
-        # Initialize parent MobileNetV2 (don't pass se params)
+        # Initialize parent MobileNetV2 (don't pass ca params)
         super().__init__(
             widen_factor=widen_factor,
             out_indices=out_indices,
@@ -133,9 +134,9 @@ class SEMobileNetV2(MobileNetV2):
         )
 
     def make_layer(self, out_channels, num_blocks, stride, expand_ratio):
-        """Stack SEInvertedResidual blocks to build a layer for SE-MobileNetV2.
+        """Stack CAInvertedResidual blocks to build a layer for CA-MobileNetV2.
 
-        This overrides the parent's make_layer to use SEInvertedResidual
+        This overrides the parent's make_layer to use CAInvertedResidual
         instead of InvertedResidual.
 
         Args:
@@ -146,19 +147,19 @@ class SEMobileNetV2(MobileNetV2):
                 hidden layer in InvertedResidual by this ratio.
 
         Returns:
-            nn.Sequential: A layer composed of multiple SEInvertedResidual blocks.
+            nn.Sequential: A layer composed of multiple CAInvertedResidual blocks.
         """
         layers = []
         for i in range(num_blocks):
             if i >= 1:
                 stride = 1
             layers.append(
-                SEInvertedResidual(
+                CAInvertedResidual(
                     self.in_channels,
                     out_channels,
                     stride,
                     expand_ratio=expand_ratio,
-                    se_ratio=self.se_ratio,
+                    reduction=self.reduction,
                     conv_cfg=self.conv_cfg,
                     norm_cfg=self.norm_cfg,
                     act_cfg=self.act_cfg,
