@@ -30,6 +30,7 @@ from .mobilenet_v3 import MobileNetV3
 from .se_mobilenet_v2 import SEMobileNetV2
 from .cbam_mobilenet_v2 import CBAMMobileNetV2
 from .cbam_mobilenet_v2_dw import CBAMMobileNetV2DWConv
+from .eca_mobilenet_v2 import ECAMobileNetV2
 from .ca_mobilenet_v2 import CAMobileNetV2
 from .combo_mobilenet_v2 import ComboMobileNetV2
 from .mobileone import MobileOne
@@ -90,6 +91,7 @@ __all__ = [
     'SEMobileNetV2',
     'CBAMMobileNetV2',
     'CBAMMobileNetV2DWConv',
+    'ECAMobileNetV2',
     'CAMobileNetV2',
     'ComboMobileNetV2',
     'VisionTransformer',

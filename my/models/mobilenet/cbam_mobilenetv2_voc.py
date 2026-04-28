@@ -43,21 +43,6 @@ model = dict(
     )
 )
 
-custom_hooks = [
-    dict(
-        type='FreezeLayersHook',
-        freeze_layers=['backbone'],     # 冻结整个 backbone
-        freeze_epochs=5,               # 5个epoch后解冻
-        unfreeze_backbone=True,
-        priority='ABOVE_NORMAL'
-    ),
-    dict(
-        type='EMAHook',
-        momentum=0.0002,
-        priority='ABOVE_NORMAL'
-    ),
-]
-
 # 保存 checkpoint 配置
 default_hooks = dict(
     checkpoint=dict(
@@ -69,7 +54,7 @@ default_hooks = dict(
     ),
     early_stopping=dict(
         type='EarlyStoppingHook',
-        patience=15,
+        patience=20,
         monitor='multi-label/mAP',
         rule='greater'
     )
