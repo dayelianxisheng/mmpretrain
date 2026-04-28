@@ -95,13 +95,20 @@ optim_wrapper = dict(
     )
 )
 
-# 每10个epoch保存一次权重
+# 保存 checkpoint 配置
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', interval=10, max_keep_ckpts=3),
+    checkpoint=dict(
+        type='CheckpointHook',
+        interval=10,
+        max_keep_ckpts=3,
+        save_best='multi-label/mAP',
+        rule='greater'
+    ),
     early_stopping=dict(
         type='EarlyStoppingHook',
         patience=15,
-        monitor='multi-label/mAP'
+        monitor='multi-label/mAP',
+        rule='greater'
     )
 )
 

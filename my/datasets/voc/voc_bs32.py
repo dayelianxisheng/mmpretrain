@@ -41,7 +41,7 @@ test_pipeline = [
 
 train_dataloader = dict(
     batch_size=32,
-    num_workers=8,
+    num_workers=2,
     dataset=dict(
         type=dataset_type,
         data_root='data/VOC2012/VOCdevkit/VOC2012',
@@ -52,7 +52,7 @@ train_dataloader = dict(
 
 val_dataloader = dict(
     batch_size=32,
-    num_workers=8,
+    num_workers=2,
     dataset=dict(
         type=dataset_type,
         data_root='data/VOC2012/VOCdevkit/VOC2012',

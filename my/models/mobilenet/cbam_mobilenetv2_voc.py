@@ -6,7 +6,7 @@ _base_ = [
     '../../../configs/_base_/models/mobilenet_v2_1x.py',
     '../../datasets/voc/voc_bs64.py',
     '../../../configs/_base_/default_runtime.py',
-    '../../schedules/adam_bs64.py'
+    '../../schedules/adamw_bs64.py'
 ]
 
 # CBAM-MobileNetV2 模型配置
@@ -31,13 +31,8 @@ model = dict(
         mean=[123.675, 116.28, 103.53],
         std=[58.395, 57.12, 57.375],
         to_rgb=True,
-        to_onehot=True,
-        batch_augments=dict(
-            augments=[
-                dict(type='Mixup', alpha=0.2),
-                dict(type='CutMix', alpha=1.0),
-            ],
-        ),
+        to_onehot=False,
+        # 多标签分类不使用 Mixup/CutMix，会导致标签混淆和loss震荡
     ),
     head=dict(
         type='MultiLabelLinearClsHead',
@@ -48,7 +43,6 @@ model = dict(
     )
 )
 
-# 冻结解冻策略：前5个epoch冻结backbone只训练head和CBAM，解冻后用不同学习率
 custom_hooks = [
     dict(
         type='FreezeLayersHook',
@@ -64,39 +58,19 @@ custom_hooks = [
     ),
 ]
 
-# 学习率调度：冻结期小lr，解冻后cosine恢复
-param_scheduler = [
-    # 前5个epoch冻结期用小学习率
-    dict(type='LinearLR', start_factor=0.01, by_epoch=True, begin=0, end=5),
-    # 解冻后用常规学习率+余弦退火
-    dict(type='CosineAnnealingLR', T_max=95, eta_min=5e-6, by_epoch=True, begin=5, end=100),
-]
-
-# 优化器配置：参数分组，backbone用低学习率，head和CBAM用正常学习率
-optim_wrapper = dict(
-    optimizer=dict(
-        type='Adam',
-        lr=0.00005,
-        betas=(0.9, 0.999),
-        weight_decay=0.0001,
-    ),
-    clip_grad=dict(max_norm=1.0),
-    paramwise_cfg=dict(
-        custom_keys={
-            # backbone 用 0.1x 学习率
-            'backbone': dict(lr_mult=0.1),
-            # head 用正常学习率
-            'head': dict(lr_mult=1.0),
-        }
-    )
-)
-
-# 每10个epoch保存一次权重
+# 保存 checkpoint 配置
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', interval=10, max_keep_ckpts=3),
+    checkpoint=dict(
+        type='CheckpointHook',
+        interval=10,
+        max_keep_ckpts=3,
+        save_best='multi-label/mAP',  # 保存最佳 mAP 模型
+        rule='greater'  # mAP 越高越好
+    ),
     early_stopping=dict(
         type='EarlyStoppingHook',
         patience=15,
-        monitor='multi-label/mAP'
+        monitor='multi-label/mAP',
+        rule='greater'
     )
 )

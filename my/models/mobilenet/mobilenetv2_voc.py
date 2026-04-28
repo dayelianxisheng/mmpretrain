@@ -4,7 +4,7 @@ _base_ = [
     '../../../configs/_base_/models/mobilenet_v2_1x.py',
     '../../datasets/voc/voc_bs64.py',
     '../../../configs/_base_/default_runtime.py',
-    '../../schedules/adam_bs64.py',
+    '../../schedules/adamw_bs64.py',
 ]
 
 # 多标签分类模型配置
@@ -22,12 +22,6 @@ model = dict(
         std=[58.395, 57.12, 57.375],
         to_rgb=True,
         to_onehot=True,
-        batch_augments=dict(
-            augments=[
-                dict(type='Mixup', alpha=0.2),
-                dict(type='CutMix', alpha=1.0),
-            ],
-        ),
     ),
     head=dict(
         type='MultiLabelLinearClsHead',
@@ -38,12 +32,19 @@ model = dict(
     )
 )
 
-# 每10个epoch保存一次权重
+# 保存 checkpoint 配置
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', interval=10, max_keep_ckpts=3),
+    checkpoint=dict(
+        type='CheckpointHook',
+        interval=10,
+        max_keep_ckpts=3,
+        save_best='multi-label/mAP',
+        rule='greater'
+    ),
     early_stopping=dict(
         type='EarlyStoppingHook',
         patience=10,
-        monitor='multi-label/mAP'
+        monitor='multi-label/mAP',
+        rule='greater'
     )
 )
