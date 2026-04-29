@@ -27,12 +27,15 @@ from .mixmim import MixMIMTransformer
 from .mlp_mixer import MlpMixer
 from .mobilenet_v2 import MobileNetV2
 from .mobilenet_v3 import MobileNetV3
+from .hswish_mobilenet_v2 import HSwishMobileNetV2
+from .se_hswish_mobilenet_v2 import SEHSwishMobileNetV2
 from .se_mobilenet_v2 import SEMobileNetV2
 from .cbam_mobilenet_v2 import CBAMMobileNetV2
 from .cbam_mobilenet_v2_dw import CBAMMobileNetV2DWConv
 from .eca_mobilenet_v2 import ECAMobileNetV2
 from .ca_mobilenet_v2 import CAMobileNetV2
 from .combo_mobilenet_v2 import ComboMobileNetV2
+from .mobilevit_mobilenet_v2 import MobileVitMobileNetV2
 from .mobileone import MobileOne
 from .mobilevit import MobileViT
 from .mvit import MViT
@@ -88,12 +91,15 @@ __all__ = [
     'ShuffleNetV2',
     'MobileNetV2',
     'MobileNetV3',
+    'HSwishMobileNetV2',
+    'SEHSwishMobileNetV2',
     'SEMobileNetV2',
     'CBAMMobileNetV2',
     'CBAMMobileNetV2DWConv',
     'ECAMobileNetV2',
     'CAMobileNetV2',
     'ComboMobileNetV2',
+    'MobileVitMobileNetV2',
     'VisionTransformer',
     'SwinTransformer',
     'TNT',

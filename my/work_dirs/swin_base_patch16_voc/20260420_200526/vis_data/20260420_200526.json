@@ -1,0 +1,2 @@
+{"base_lr": 9.297658862876257e-05, "lr": 9.297658862876257e-05, "data_time": 0.001320219039916992, "grad_norm": 4.750025582313538, "loss": 4.651512479782104, "time": 0.5900349378585815, "epoch": 1, "iter": 60, "memory": 21962, "step": 60}
+{"multi-label/precision": 0.0, "multi-label/recall": 0.0, "multi-label/f1-score": 0.0, "multi-label/precision_micro": 0.0, "multi-label/recall_micro": 0.0, "multi-label/f1-score_micro": 0.0, "multi-label/mAP": 10.96347427368164, "data_time": 0.0046923903168224895, "time": 0.22687351117368604, "step": 1}

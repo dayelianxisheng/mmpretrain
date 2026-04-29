@@ -31,12 +31,6 @@ model = dict(
         std=[58.395, 57.12, 57.375],
         to_rgb=True,
         to_onehot=True,
-        batch_augments=dict(
-            augments=[
-                dict(type='Mixup', alpha=0.2),
-                dict(type='CutMix', alpha=1.0),
-            ],
-        ),
     ),
     head=dict(
         type='MultiLabelLinearClsHead',
@@ -47,21 +41,21 @@ model = dict(
     )
 )
 
-# 冻结解冻策略：前5个epoch冻结backbone只训练head和SE，解冻后用不同学习率
-custom_hooks = [
-    dict(
-        type='FreezeLayersHook',
-        freeze_layers=['backbone'],     # 冻结整个 backbone
-        freeze_epochs=5,               # 5个epoch后解冻
-        unfreeze_backbone=True,
-        priority='ABOVE_NORMAL'
-    ),
-    dict(
-        type='EMAHook',
-        momentum=0.0002,
-        priority='ABOVE_NORMAL'
-    ),
-]
+# # 冻结解冻策略：前5个epoch冻结backbone只训练head和SE，解冻后用不同学习率
+# custom_hooks = [
+#     dict(
+#         type='FreezeLayersHook',
+#         freeze_layers=['backbone'],     # 冻结整个 backbone
+#         freeze_epochs=5,               # 5个epoch后解冻
+#         unfreeze_backbone=True,
+#         priority='ABOVE_NORMAL'
+#     ),
+#     dict(
+#         type='EMAHook',
+#         momentum=0.0002,
+#         priority='ABOVE_NORMAL'
+#     ),
+# ]
 
 
 # 保存 checkpoint 配置

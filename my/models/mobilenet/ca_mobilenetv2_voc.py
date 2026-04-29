@@ -1,12 +1,8 @@
-# CA-MobileNetV2 VOC2012 训练配置
-# 改进：在 MobileNetV2 的每个 InvertedResidual 后添加 CoordAttention 注意力模块
-# 训练策略：冻结解冻 + EMA
-
 _base_ = [
     '../../../configs/_base_/models/mobilenet_v2_1x.py',
     '../../datasets/voc/voc_bs64.py',
     '../../../configs/_base_/default_runtime.py',
-    '../../schedules/adam_bs64.py'
+    '../../schedules/adamw_bs64.py'
 ]
 
 # CA-MobileNetV2 模型配置
@@ -31,64 +27,32 @@ model = dict(
         std=[58.395, 57.12, 57.375],
         to_rgb=True,
         to_onehot=True,
-        batch_augments=dict(
-            augments=[
-                dict(type='Mixup', alpha=0.2),
-                dict(type='CutMix', alpha=1.0),
-            ],
-        ),
     ),
     head=dict(
         type='MultiLabelLinearClsHead',
         num_classes=20,
         in_channels=1280,  # MobileNetV2 输出通道
-        topk=1,
+        topk=3,
         loss=dict(type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0)
     )
 )
 
-# 冻结解冻策略：前5个epoch冻结backbone只训练head和CA，解冻后用不同学习率
-custom_hooks = [
-    dict(
-        type='FreezeLayersHook',
-        freeze_layers=['backbone'],     # 冻结整个 backbone
-        freeze_epochs=5,               # 5个epoch后解冻
-        unfreeze_backbone=True,
-        priority='ABOVE_NORMAL'
-    ),
-    dict(
-        type='EMAHook',
-        momentum=0.0002,
-        priority='ABOVE_NORMAL'
-    ),
-]
+# # 冻结解冻策略：前5个epoch冻结backbone只训练head和CA，解冻后用不同学习率
+# custom_hooks = [
+#     dict(
+#         type='FreezeLayersHook',
+#         freeze_layers=['backbone'],     # 冻结整个 backbone
+#         freeze_epochs=5,               # 5个epoch后解冻
+#         unfreeze_backbone=True,
+#         priority='ABOVE_NORMAL'
+#     ),
+#     # dict(
+#     #     type='EMAHook',
+#     #     momentum=0.0002,
+#     #     priority='ABOVE_NORMAL'
+#     # ),
+# ]
 
-# 学习率调度：冻结期小lr，解冻后cosine恢复
-param_scheduler = [
-    # 前5个epoch冻结期用小学习率
-    dict(type='LinearLR', start_factor=0.01, by_epoch=True, begin=0, end=5),
-    # 解冻后用常规学习率+余弦退火
-    dict(type='CosineAnnealingLR', T_max=95, eta_min=5e-6, by_epoch=True, begin=5, end=100),
-]
-
-# 优化器配置：参数分组，backbone用低学习率，head和CA用正常学习率
-optim_wrapper = dict(
-    optimizer=dict(
-        type='Adam',
-        lr=0.00005,
-        betas=(0.9, 0.999),
-        weight_decay=0.0001,
-    ),
-    clip_grad=dict(max_norm=1.0),
-    paramwise_cfg=dict(
-        custom_keys={
-            # backbone 用 0.1x 学习率
-            'backbone': dict(lr_mult=0.1),
-            # head 用正常学习率
-            'head': dict(lr_mult=1.0),
-        }
-    )
-)
 
 # 保存 checkpoint 配置
 default_hooks = dict(

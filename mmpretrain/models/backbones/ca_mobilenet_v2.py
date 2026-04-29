@@ -11,9 +11,11 @@ from .mobilenet_v2 import MobileNetV2, InvertedResidual
 
 
 class CAInvertedResidual(InvertedResidual):
-    """InvertedResidual block with CoordAttention for MobileNetV2.
+    """InvertedResidual block with CoordAttention applied between
+    depthwise and pointwise convolution.
 
-    Inherits from the original InvertedResidual and adds CoordAttention module.
+    Structure:
+    PW(expand) -> DW(3x3) -> [CA] -> PW(linear projection)
     """
 
     def __init__(self,
@@ -27,7 +29,7 @@ class CAInvertedResidual(InvertedResidual):
                  act_cfg=dict(type='ReLU6'),
                  with_cp=False,
                  init_cfg=None):
-        # Initialize the parent InvertedResidual (don't pass ca params to parent)
+        # 先初始化父类，构建完整的 self.conv
         super().__init__(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -40,30 +42,47 @@ class CAInvertedResidual(InvertedResidual):
             init_cfg=init_cfg
         )
 
-        # Add CoordAttention module after the convolution
+        # 关键：self.conv 是一个 nn.Sequential，我们需要知道它的内部结构
+        # 默认结构: [ConvModule(1x1 expand), ConvModule(3x3 DW), ConvModule(1x1 project)]
+        # 我们需要在索引 1（DW）之后，索引 2（project）之前插入 CA
+
+        # 注意：CA 的输入/输出通道数应该是 expand 后的通道数
+        # expand 后的通道数 = in_channels * expand_ratio
+        expanded_channels = in_channels * expand_ratio
+
+        # 使 expanded_channels 能被 8 整除（MobileNetV2 的 make_divisible 逻辑）
+        # 这里简化处理，实际可能需要调用 make_divisible
         self.ca = CoordAtt(
-            inp=out_channels,
-            oup=out_channels,
+            inp=expanded_channels,
+            oup=expanded_channels,
             reduction=reduction
         )
 
     def forward(self, x):
-        """Forward function with CoordAttention.
+        """Forward with CA placed between DW and PW."""
 
-        Args:
-            x (Tensor): Input feature map.
-
-        Returns:
-            Tensor: Output feature map with CoordAttention.
-        """
         def _inner_forward(x):
-            # Get the output from convolution (inherited from parent)
-            out = self.conv(x)
+            # 手动执行 self.conv 的子模块，而不是直接调用 self.conv
+            # self.conv 是 nn.Sequential，包含：
+            #   [0]: PW expand (1x1)
+            #   [1]: DW (3x3)
+            #   [2]: PW project (1x1)
 
-            # Apply CoordAttention
-            out = self.ca(out)
+            if self.expand_ratio != 1:
+                # 有 expand 层
+                # Step 1: Pointwise expand
+                hidden = self.conv[0](x)
+                # Step 2: Depthwise + CA
+                hidden = self.conv[1](hidden)
+                hidden = self.ca(hidden)  # ★ CA 插入在这里
+                # Step 3: Pointwise project
+                out = self.conv[2](hidden)
+            else:
+                # expand_ratio=1 时 self.conv 只有两个子模块：[DW, PW]
+                hidden = self.conv[0](x)
+                hidden = self.ca(hidden)  # ★ CA 插入在这里
+                out = self.conv[1](hidden)
 
-            # Residual connection
             if self.use_res_connect:
                 return x + out
             else:

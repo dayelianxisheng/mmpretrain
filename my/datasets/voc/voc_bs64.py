@@ -4,7 +4,7 @@ data_preprocessor = dict(
     mean=[123.675, 116.28, 103.53],
     std=[58.395, 57.12, 57.375],
     to_rgb=True,
-    to_onehot=True,
+    to_onehot=True,  # 多标签需要 one-hot 格式供 MultiLabelClsHead 使用
 )
 
 train_pipeline = [
@@ -16,8 +16,8 @@ train_pipeline = [
                   rotate_limit=15, p=0.5),
              dict(type='RandomBrightnessContrast', brightness_limit=0.3,
                   contrast_limit=0.3, p=0.5),
-             dict(type='CoarseDropout', max_holes=6, max_height=40,
-                  max_width=40, p=0.3),
+             dict(type='CoarseDropout', num_holes_range=(1, 6),
+                  hole_height_range=(1, 40), hole_width_range=(1, 40), p=0.3),
          ],
          ),
     # 基础几何变换
