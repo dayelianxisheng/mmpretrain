@@ -12,6 +12,7 @@
 import argparse
 import os
 import sys
+import time
 
 import numpy as np
 import torch
@@ -73,19 +74,29 @@ def load_model(config_path: str, checkpoint_path: str, device: str):
     return model
 
 
-def inference(model, image_tensor: torch.Tensor, threshold: float = 0.5):
-    """推理并返回多标签预测结果。"""
+def inference(model, image_tensor: torch.Tensor, threshold: float = 0.5, warmup: int = 10):
+    """推理并返回多标签预测结果。首次执行若干次 warmup 以稳定计时。"""
+    # Warmup
+    with torch.no_grad():
+        for _ in range(warmup):
+            model(image_tensor)
+
+    # 正式计时
+    if image_tensor.is_cuda:
+        torch.cuda.synchronize()
+    t0 = time.perf_counter()
     with torch.no_grad():
         outputs = model(image_tensor)
-        # MultiLabelLinearClsHead 输出 logits
         if isinstance(outputs, (list, tuple)):
             scores = outputs[0]
         elif isinstance(outputs, torch.Tensor):
             scores = outputs
         else:
             scores = outputs
-
         probs = torch.sigmoid(scores).cpu().numpy()[0]
+    if image_tensor.is_cuda:
+        torch.cuda.synchronize()
+    forward_ms = (time.perf_counter() - t0) * 1000
 
     # 获取概率大于阈值的类别
     pred_indices = np.where(probs >= threshold)[0]
@@ -98,7 +109,7 @@ def inference(model, image_tensor: torch.Tensor, threshold: float = 0.5):
             'score': float(probs[idx]),
         })
 
-    return results, probs
+    return results, probs, forward_ms
 
 
 def main():
@@ -116,6 +127,8 @@ def main():
                         help='多标签分类的置信度阈值')
     parser.add_argument('--topk', type=int, default=5,
                         help='打印每个类别的概率时显示前 K 个')
+    parser.add_argument('--warmup', type=int, default=10,
+                        help='推理前 warmup 次数（用于稳定计时），默认 10')
     args = parser.parse_args()
 
     print(f'配置文件: {args.config}')
@@ -136,7 +149,7 @@ def main():
 
         try:
             tensor = preprocess_image(image_path, args.device)
-            results, all_probs = inference(model, tensor, args.threshold)
+            results, all_probs, forward_ms = inference(model, tensor, args.threshold, warmup=args.warmup)
 
             # 输出预测结果
             if results:
@@ -152,6 +165,10 @@ def main():
             for i in topk_idx:
                 marker = ' *' if all_probs[i] >= args.threshold else ''
                 print(f'  {VOC_CLASSES[i]:<15}  {all_probs[i]:.4f}{marker}')
+
+            # 输出推理速度
+            device_str = 'cuda' if torch.cuda.is_available() and args.device == 'cuda' else args.device
+            print(f'\n推理速度: {forward_ms:.2f} ms/张 ({device_str})')
 
         except Exception as e:
             print(f'推理失败: {e}')

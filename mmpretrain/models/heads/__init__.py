@@ -22,6 +22,7 @@ from .mocov3_head import MoCoV3Head
 from .multi_label_cls_head import MultiLabelClsHead
 from .multi_label_csra_head import CSRAClsHead
 from .multi_label_linear_head import MultiLabelLinearClsHead
+from .multi_label_attn_head import MultiLabelAttnClsHead
 from .multi_task_head import MultiTaskHead
 from .seq_gen_head import SeqGenerationHead
 from .simmim_head import SimMIMHead
@@ -38,6 +39,7 @@ __all__ = [
     'StackedLinearClsHead',
     'MultiLabelClsHead',
     'MultiLabelLinearClsHead',
+    'MultiLabelAttnClsHead',
     'VisionTransformerClsHead',
     'DeiTClsHead',
     'ConformerHead',

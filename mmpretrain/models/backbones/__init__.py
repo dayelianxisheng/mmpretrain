@@ -35,7 +35,7 @@ from .cbam_mobilenet_v2_dw import CBAMMobileNetV2DWConv
 from .eca_mobilenet_v2 import ECAMobileNetV2
 from .ca_mobilenet_v2 import CAMobileNetV2
 from .combo_mobilenet_v2 import ComboMobileNetV2
-from .mobilevit_mobilenet_v2 import MobileVitMobileNetV2
+from .mobilevit_mobilenet_v2 import MobileVitMobileNetV2, WeightedMobileVitBlock
 from .mobileone import MobileOne
 from .mobilevit import MobileViT
 from .mvit import MViT

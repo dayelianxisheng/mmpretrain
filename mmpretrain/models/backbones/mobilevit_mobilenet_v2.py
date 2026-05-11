@@ -179,28 +179,119 @@ class MobileVitBlock(BaseModule):
         return x
 
 
+class WeightedMobileVitBlock(BaseModule):
+    """InvertedResidual + MobileVitBlock in parallel, weighted fusion.
+
+    Keeps the original InvertedResidual (pretrained weight compatible) and adds
+    MobileVitBlock in parallel, fusing outputs: alpha*IR_out + beta*MobileVit_out.
+    This preserves pretrained weights while injecting global modeling ability.
+
+    Args:
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        stride (int): Stride of the first 3x3 conv. Default: 1.
+        expand_ratio (int): Expand ratio for InvertedResidual. Default: 6.
+        transformer_dim (int): Transformer embedding dimension. Default: 96.
+        ffn_dim (int): FFN hidden dim. Default: 192.
+        num_transformer_blocks (int): Transformer blocks. Default: 1.
+        conv_cfg (dict, optional): Conv config. Default: None.
+        norm_cfg (dict): Norm config. Default: dict(type='BN').
+        act_cfg (dict): Act config. Default: dict(type='HSwish').
+        mobilevit_weight (float): Weight for MobileVitBlock output. Default: 0.5.
+            Final: out = (1 - mobilevit_weight) * IR_out + mobilevit_weight * MobileVit_out
+        with_cp (bool): Use checkpoint. Default: False.
+    """
+
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int,
+                 stride: int = 1,
+                 expand_ratio: int = 6,
+                 transformer_dim: int = 96,
+                 ffn_dim: int = 192,
+                 num_transformer_blocks: int = 1,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN'),
+                 act_cfg=dict(type='HSwish'),
+                 mobilevit_weight: float = 0.5,
+                 freeze_ir: bool = True,
+                 with_cp: bool = False,
+                 init_cfg=None):
+        super(WeightedMobileVitBlock, self).__init__(init_cfg)
+        self.mobilevit_weight = mobilevit_weight
+        self.res_weight = 1.0 - mobilevit_weight
+        self.with_cp = with_cp
+
+        # Original InvertedResidual (pretrained compatible)
+        self.ir = InvertedResidual(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            stride=stride,
+            expand_ratio=expand_ratio,
+            conv_cfg=conv_cfg,
+            norm_cfg=norm_cfg,
+            act_cfg=act_cfg,
+            with_cp=with_cp)
+
+        # MobileVitBlock in parallel
+        self.mobilevit = MobileVitBlock(
+            in_channels=in_channels,
+            transformer_dim=transformer_dim,
+            ffn_dim=ffn_dim,
+            out_channels=out_channels,
+            num_transformer_blocks=num_transformer_blocks,
+            conv_cfg=conv_cfg,
+            norm_cfg=norm_cfg,
+            act_cfg=act_cfg,
+            with_cp=with_cp)
+
+        if freeze_ir:
+            for p in self.ir.parameters():
+                p.requires_grad = False
+            self.ir.eval()
+
+    def forward(self, x):
+        ir_out = self.ir(x)
+        ir_out = ir_out.detach()
+
+        mobilevit_out = self.mobilevit(x)
+
+        if mobilevit_out.shape[2:] != ir_out.shape[2:]:
+            mobilevit_out = nn.functional.interpolate(
+                mobilevit_out, size=ir_out.shape[2:],
+                mode='bilinear', align_corners=False)
+
+        return self.res_weight * ir_out + self.mobilevit_weight * mobilevit_out
+
+
 @MODELS.register_module()
 class MobileVitMobileNetV2(BaseModule):
-    """MobileNetV2 with MobileViT blocks for global modeling.
+    """MobileNetV2 with optional MobileViT blocks for global modeling.
 
-    Combines efficient MobileNetV2 local feature extraction with lightweight
-    Transformer blocks for global context, targeting improved multi-label
-    classification on VOC.
+    Supports two modes per layer:
+    - 'mobilevit': Replace last block with MobileVitBlock (no pretrained load)
+    - 'weighted': Keep InvertedResidual, add MobileVitBlock in parallel with
+      weighted fusion (pretrained compatible)
 
     Args:
         widen_factor (float): Width multiplier. Default: 1.0.
-        out_indices (Sequence[int]): Output from which stages. Default: (5, ).
+        out_indices (Sequence[int]): Output from which stages. Default: (6, ).
         frozen_stages (int): Freeze stages. Default: -1.
         conv_cfg (dict, optional): Conv config. Default: None.
         norm_cfg (dict): Norm config. Default: dict(type='BN').
         act_cfg (dict): Act config. Default: dict(type='HSwish').
         norm_eval (bool): Set BN to eval mode. Default: False.
         with_cp (bool): Use checkpoint. Default: False.
-        mobilevit_layers (list): Which stages (0-based, after stem) use
-            MobileVitBlock instead of InvertedResidual.
-            E.g. [3, 4] replaces stage-3 and stage-4 with MobileVitBlocks.
-            Default: [4] (last stage only).
-        transformer_dim (int): Transformer embedding dimension. Default: 96.
+        mobilevit_layers (list): Stages where MobileVitBlock replaces IR.
+            Default: ().
+        weighted_layers (dict): Stages where WeightedMobileVitBlock is used.
+            Format: {stage_idx: mobilevit_weight (0.0~1.0)}.
+            E.g. {4: 0.5} uses weighted fusion at stage-4 with 0.5 weight.
+            Default: {4: 0.5}.
+        freeze_ir_in_weighted (bool): Freeze InvertedResidual in WeightedMobileVitBlock.
+            Keeps pretrained knowledge intact, only trains MobileViT branch.
+            Default: True.
+        transformer_dim (int): Transformer embedding dim. Default: 96.
         ffn_dim (int): FFN hidden dim. Default: 192.
         num_transformer_blocks (int): Transformer blocks per MobileVitBlock.
             Default: 1.
@@ -208,26 +299,31 @@ class MobileVitMobileNetV2(BaseModule):
     """
 
     # arch: [expand_ratio, out_channels, num_blocks, stride]
+    # Must match pretrained MobileNetV2 exactly (layer0-7), with layer8 as WeightedMobileVitBlock
     arch_settings = [
-        [1, 16, 1, 1],
-        [6, 24, 2, 2],
-        [6, 32, 3, 2],
-        [6, 64, 4, 2],
-        [6, 96, 3, 1],
-        [6, 160, 3, 2],
-        [6, 320, 1, 1],
+        [1, 16, 1, 1],    # layer0: 16ch, 1 block
+        [6, 24, 2, 2],    # layer1: 24ch, 2 blocks
+        [6, 32, 3, 2],    # layer2: 32ch, 3 blocks
+        [6, 64, 4, 2],    # layer3: 64ch, 4 blocks
+        [6, 96, 3, 1],    # layer4: 96ch, 3 blocks
+        [6, 160, 4, 2],   # layer5: 160ch, 4 blocks
+        [6, 320, 3, 2],   # layer6: 320ch, 3 blocks
+        [6, 320, 1, 1],   # layer7: 320ch, 1 block
+        [6, 320, 1, 1],   # layer8: 320ch, 1 block -> replaced with WeightedMobileVitBlock
     ]
 
     def __init__(self,
                  widen_factor=1.,
-                 out_indices=(5, ),
+                 out_indices=(6, ),
                  frozen_stages=-1,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
                  act_cfg=dict(type='HSwish'),
                  norm_eval=False,
                  with_cp=False,
-                 mobilevit_layers=(4, ),
+                 mobilevit_layers=(),
+                 weighted_layers=None,
+                 freeze_ir_in_weighted=True,
                  transformer_dim=96,
                  ffn_dim=192,
                  num_transformer_blocks=1,
@@ -246,13 +342,15 @@ class MobileVitMobileNetV2(BaseModule):
         self.norm_eval = norm_eval
         self.with_cp = with_cp
         self.mobilevit_layers = set(mobilevit_layers)
+        self.weighted_layers = weighted_layers or {}
         self.transformer_dim = transformer_dim
         self.ffn_dim = ffn_dim
         self.num_transformer_blocks = num_transformer_blocks
+        self.freeze_ir_in_weighted = freeze_ir_in_weighted
 
         for index in out_indices:
-            if index not in range(0, 7):
-                raise ValueError(f'out_indices must in range(0, 7), got {index}')
+            if index not in range(0, 9):
+                raise ValueError(f'out_indices must in range(0, 9), got {index}')
 
         self.in_channels = make_divisible(32 * widen_factor, 8)
 
@@ -275,18 +373,23 @@ class MobileVitMobileNetV2(BaseModule):
             out_channels = make_divisible(channel * widen_factor, 8)
 
             layer_name = f'layer{i + 1}'
+            mobilevit_stage = i in self.mobilevit_layers
+            weighted_stage_info = self.weighted_layers.get(i, None)
+
             layer = self._make_layer(
                 in_channels=self.in_channels,
                 out_channels=out_channels,
                 num_blocks=num_blocks,
                 stride=stride,
                 expand_ratio=expand_ratio,
-                mobilevit_stage=(i in self.mobilevit_layers),
+                mobilevit_stage=mobilevit_stage,
+                weighted_stage=weighted_stage_info is not None,
+                mobilevit_weight=weighted_stage_info if isinstance(weighted_stage_info, float) else 0.5,
+                freeze_ir=self.freeze_ir_in_weighted,
             )
             self.add_module(layer_name, layer)
             self.layers.append(layer_name)
             self.in_channels = out_channels
-            self.layer_idx += 1
 
         # Final 1x1 expansion conv
         if widen_factor > 1.0:
@@ -303,17 +406,16 @@ class MobileVitMobileNetV2(BaseModule):
             conv_cfg=conv_cfg,
             norm_cfg=norm_cfg,
             act_cfg=act_cfg)
-        self.layers.append('conv2')
 
     def _make_layer(self, in_channels, out_channels, num_blocks, stride,
-                    expand_ratio, mobilevit_stage):
-        """Build a stage: either standard InvertedResiduals or MobileVitBlock."""
+                    expand_ratio, mobilevit_stage, weighted_stage,
+                    mobilevit_weight=0.5, freeze_ir=True):
+        """Build a stage with support for replacement and weighted fusion."""
         layers = []
         for i in range(num_blocks):
             block_stride = stride if i == 0 else 1
 
             if mobilevit_stage and i == num_blocks - 1:
-                # Replace the last block of this stage with MobileVitBlock
                 layers.append(
                     MobileVitBlock(
                         in_channels=in_channels,
@@ -326,9 +428,24 @@ class MobileVitMobileNetV2(BaseModule):
                         act_cfg=self.act_cfg,
                         with_cp=self.with_cp,
                     ))
+            elif weighted_stage and i == num_blocks - 1:
+                layers.append(
+                    WeightedMobileVitBlock(
+                        in_channels=in_channels,
+                        out_channels=out_channels,
+                        stride=block_stride,
+                        expand_ratio=expand_ratio,
+                        transformer_dim=self.transformer_dim,
+                        ffn_dim=self.ffn_dim,
+                        num_transformer_blocks=self.num_transformer_blocks,
+                        conv_cfg=self.conv_cfg,
+                        norm_cfg=self.norm_cfg,
+                        act_cfg=self.act_cfg,
+                        mobilevit_weight=mobilevit_weight,
+                        freeze_ir=freeze_ir,
+                        with_cp=self.with_cp,
+                    ))
             else:
-                act = dict(type='HSwish') if self.layer_idx >= 5 else dict(
-                    type='ReLU6')
                 layers.append(
                     InvertedResidual(
                         in_channels=in_channels,
@@ -337,7 +454,7 @@ class MobileVitMobileNetV2(BaseModule):
                         expand_ratio=expand_ratio,
                         conv_cfg=self.conv_cfg,
                         norm_cfg=self.norm_cfg,
-                        act_cfg=act,
+                        act_cfg=self.act_cfg,
                         with_cp=self.with_cp))
             in_channels = out_channels
         return nn.Sequential(*layers)
@@ -352,6 +469,33 @@ class MobileVitMobileNetV2(BaseModule):
             for param in layer.parameters():
                 param.requires_grad = False
 
+    def init_weights(self):
+        """Custom init: remap pretrained MobileNetV2 keys before loading."""
+        import re
+        if self.init_cfg:
+            for cfg in (self.init_cfg if isinstance(self.init_cfg, list) else [self.init_cfg]):
+                if cfg.get('type') == 'Pretrained' or cfg.get('type') is None:
+                    if 'checkpoint' in cfg:
+                        import torch
+                        state_dict = torch.load(cfg['checkpoint'], map_location='cpu', weights_only=False)
+                        if 'state_dict' in state_dict:
+                            state_dict = state_dict['state_dict']
+                        prefix = cfg.get('prefix', '')
+                        mapped = {}
+                        for k, v in state_dict.items():
+                            # Strip prefix (e.g. 'backbone.' -> 'xxx')
+                            if prefix and k.startswith(prefix + '.'):
+                                k_stripped = k[len(prefix) + 1:]
+                            elif prefix and k == prefix:
+                                k_stripped = ''
+                            else:
+                                k_stripped = k
+                            k_mapped = re.sub(r'(?<!\.)layer7\.3\.', 'layer8.0.ir.', k_stripped)
+                            mapped[k_mapped] = v
+                        self.load_state_dict(mapped, strict=False)
+                        return
+        super().init_weights()
+
     def train(self, mode=True):
         super(MobileVitMobileNetV2, self).train(mode)
         self._freeze_stages()
@@ -360,6 +504,23 @@ class MobileVitMobileNetV2(BaseModule):
                 if hasattr(m, '_ BatchNorm'):
                     m.eval()
 
+    def _load_from_pretrained_checkpoint(self, checkpoint, prefix='', mapping=None, strict=False, logger=None):
+        """Remap pretrained MobileNetV2 keys to match weighted model structure.
+
+        Pretrained: layer4.3 (last IR block) -> New model: layer4.0.ir.
+        """
+        import re
+        mapped_state_dict = {}
+        state_dict = checkpoint['state_dict']
+        for k, v in state_dict.items():
+            # Strip prefix first (e.g. 'backbone.')
+            k_stripped = k[len(prefix):] if prefix and k.startswith(prefix) else k
+            # Remap layer4.3 -> layer4.0.ir
+            k_mapped = re.sub(r'\blayer4\.3\.', 'layer4.0.ir.', k_stripped)
+            mapped_state_dict[k_mapped] = v
+
+        self.load_state_dict(mapped_state_dict, strict=strict, logger=logger)
+
     def forward(self, x):
         x = self.conv1(x)
 
@@ -367,6 +528,9 @@ class MobileVitMobileNetV2(BaseModule):
         for i, layer_name in enumerate(self.layers):
             layer = getattr(self, layer_name)
             x = layer(x)
+            # After the last backbone stage, apply 1x1 expansion conv
+            if i == len(self.layers) - 1:
+                x = self.conv2(x)
             if i in self.out_indices:
                 outs.append(x)
 

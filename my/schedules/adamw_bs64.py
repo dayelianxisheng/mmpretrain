@@ -1,14 +1,14 @@
 optim_wrapper = dict(
     optimizer=dict(
         type='AdamW',
-        lr=5e-4,
+        lr=1e-4,
         betas=(0.9, 0.999),
         weight_decay=0.05,
     ),
     clip_grad=dict(max_norm=1.0),
     paramwise_cfg=dict(
         custom_keys={
-            'backbone.cbam': dict(lr_mult=1.0),
+            # 'backbone.cbam': dict(lr_mult=1.0),
             'backbone': dict(lr_mult=0.1),
             'head': dict(lr_mult=1.0),
         }

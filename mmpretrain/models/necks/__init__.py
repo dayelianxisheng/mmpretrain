@@ -3,6 +3,7 @@ from .beitv2_neck import BEiTV2Neck
 from .cae_neck import CAENeck
 from .densecl_neck import DenseCLNeck
 from .gap import GlobalAveragePooling
+from .attention_pooling_neck import AttentionPoolingNeck
 from .gem import GeneralizedMeanPooling
 from .hr_fuse import HRFuseScales
 from .itpn_neck import iTPNPretrainDecoder
@@ -18,6 +19,7 @@ from .swav_neck import SwAVNeck
 
 __all__ = [
     'GlobalAveragePooling',
+    'AttentionPoolingNeck',
     'GeneralizedMeanPooling',
     'HRFuseScales',
     'LinearNeck',
