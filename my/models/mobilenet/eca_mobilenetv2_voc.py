@@ -56,3 +56,4 @@ default_hooks = dict(
         rule='greater'
     )
 )
+randomness = dict(seed=42, deterministic=False)

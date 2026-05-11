@@ -19,7 +19,7 @@ model = dict(
     neck=dict(
         type='AttentionPoolingNeck',
         in_channels=1280,
-        attn_mode='se',    # 'se' | 'spatial' | 'cbam' | 'none'
+        attn_mode='cbam',    # 'se' | 'spatial' | 'cbam' | 'none'
         reduction=4,
     ),
     head=dict(
@@ -51,3 +51,4 @@ default_hooks = dict(
         rule='greater'
     )
 )
+randomness = dict(seed=42, deterministic=False)

@@ -8,7 +8,6 @@ optim_wrapper = dict(
     clip_grad=dict(max_norm=1.0),
     paramwise_cfg=dict(
         custom_keys={
-            # 'backbone.cbam': dict(lr_mult=1.0),
             'backbone': dict(lr_mult=0.1),
             'head': dict(lr_mult=1.0),
         }
