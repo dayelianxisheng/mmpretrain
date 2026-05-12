@@ -29,6 +29,7 @@ class CAInvertedResidual(InvertedResidual):
                  act_cfg=dict(type='ReLU6'),
                  with_cp=False,
                  init_cfg=None):
+        self.expand_ratio = expand_ratio
         # 先初始化父类，构建完整的 self.conv
         super().__init__(
             in_channels=in_channels,

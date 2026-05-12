@@ -30,23 +30,20 @@ model = dict(
         std=[58.395, 57.12, 57.375],
         to_rgb=True,
         to_onehot=True,
-        batch_augments=dict(
-            augments=[
-                dict(type='Mixup', alpha=0.2),
-                dict(type='CutMix', alpha=1.0),
-            ],
-        ),
     ),
     head=dict(
         type='MultiLabelLinearClsHead',
         num_classes=20,
         in_channels=1280,
         topk=1,
-        loss=dict(type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0)
+        loss=dict(
+            type='AsymmetricLoss',
+            gamma_pos=0,
+            gamma_neg=4,
+            loss_weight=1.0
+        )
     )
 )
-
-# 仅添加 EMA，零参数增量
 custom_hooks = [
     dict(
         type='EMAHook',

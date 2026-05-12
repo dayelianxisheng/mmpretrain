@@ -35,28 +35,16 @@ model = dict(
     head=dict(
         type='MultiLabelLinearClsHead',
         num_classes=20,
-        in_channels=1280,  # MobileNetV2 输出通道
+        in_channels=1280,
         topk=1,
-        loss=dict(type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0)
+        loss=dict(
+            type='AsymmetricLoss',
+            gamma_pos=0,
+            gamma_neg=4,
+            loss_weight=1.0
+        )
     )
 )
-
-# # 冻结解冻策略：前5个epoch冻结backbone只训练head和SE，解冻后用不同学习率
-# custom_hooks = [
-#     dict(
-#         type='FreezeLayersHook',
-#         freeze_layers=['backbone'],     # 冻结整个 backbone
-#         freeze_epochs=5,               # 5个epoch后解冻
-#         unfreeze_backbone=True,
-#         priority='ABOVE_NORMAL'
-#     ),
-#     dict(
-#         type='EMAHook',
-#         momentum=0.0002,
-#         priority='ABOVE_NORMAL'
-#     ),
-# ]
-
 
 # 保存 checkpoint 配置
 default_hooks = dict(

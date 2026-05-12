@@ -31,9 +31,14 @@ model = dict(
     head=dict(
         type='MultiLabelLinearClsHead',
         num_classes=20,
-        in_channels=1280,  # MobileNetV2 输出通道
-        topk=3,
-        loss=dict(type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0)
+        in_channels=1280,
+        topk=1,
+        loss=dict(
+            type='AsymmetricLoss',
+            gamma_pos=0,
+            gamma_neg=4,
+            loss_weight=1.0
+        )
     )
 )
 

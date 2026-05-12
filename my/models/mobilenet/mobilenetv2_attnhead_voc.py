@@ -19,7 +19,7 @@ model = dict(
     neck=dict(
         type='AttentionPoolingNeck',
         in_channels=1280,
-        attn_mode='cbam',    # 'se' | 'spatial' | 'cbam' | 'none'
+        attn_mode='ema',    # 'se' | 'spatial' | 'cbam' | 'none'
         reduction=4,
     ),
     head=dict(
@@ -35,6 +35,14 @@ model = dict(
         )
     )
 )
+
+custom_hooks = [
+    dict(
+        type='EMAHook',
+        momentum=0.0002,
+        priority='ABOVE_NORMAL'
+    ),
+]
 
 default_hooks = dict(
     checkpoint=dict(
